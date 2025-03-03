@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import styled from 'styled-components'
+import ChatWindow from './components/ChatWindow'
 
 // Styled components
 const AppContainer = styled.div`
@@ -17,7 +18,7 @@ const Sidebar = styled.div`
   padding: 20px;
 `;
 
-const ChatWindow = styled.div`
+const ChatContainer = styled.div`
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -59,9 +60,30 @@ const ChatItem = styled.div`
   border-radius: 8px;
   cursor: pointer;
   transition: background-color 0.2s;
+  background-color: ${props => props.selected ? '#f0f2f5' : 'transparent'};
 
   &:hover {
     background-color: #f0f2f5;
+  }
+`;
+
+const EmptyState = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #666;
+  text-align: center;
+  padding: 20px;
+
+  h2 {
+    margin-bottom: 10px;
+  }
+
+  p {
+    max-width: 400px;
+    line-height: 1.5;
   }
 `;
 
@@ -78,6 +100,41 @@ function App() {
     };
     setChats([...chats, newChat]);
     setCurrentChat(newChat);
+  };
+
+  const handleSendMessage = async (message) => {
+    if (!currentChat) return;
+
+    // Add user message to chat
+    const updatedChat = {
+      ...currentChat,
+      messages: [...currentChat.messages, message]
+    };
+
+    // Update chat in state
+    setChats(chats.map(chat => 
+      chat.id === currentChat.id ? updatedChat : chat
+    ));
+    setCurrentChat(updatedChat);
+
+    // TODO: Add API call to get model response
+    // For now, we'll simulate a response
+    setTimeout(() => {
+      const assistantMessage = {
+        role: 'assistant',
+        content: `This is a simulated response to: "${message.content}"`
+      };
+      
+      const chatWithResponse = {
+        ...updatedChat,
+        messages: [...updatedChat.messages, assistantMessage]
+      };
+
+      setChats(chats.map(chat => 
+        chat.id === currentChat.id ? chatWithResponse : chat
+      ));
+      setCurrentChat(chatWithResponse);
+    }, 1000);
   };
 
   return (
@@ -98,6 +155,7 @@ function App() {
           {chats.map(chat => (
             <ChatItem
               key={chat.id}
+              selected={currentChat?.id === chat.id}
               onClick={() => setCurrentChat(chat)}
             >
               {chat.title}
@@ -105,9 +163,22 @@ function App() {
           ))}
         </ChatList>
       </Sidebar>
-      <ChatWindow>
-        {/* Chat components will be added here */}
-      </ChatWindow>
+      <ChatContainer>
+        {currentChat ? (
+          <ChatWindow
+            currentChat={currentChat}
+            onSendMessage={handleSendMessage}
+          />
+        ) : (
+          <EmptyState>
+            <h2>Welcome to the Chat App</h2>
+            <p>
+              Start a new conversation by clicking the "New Chat" button on the left.
+              You can choose different AI models from the dropdown menu.
+            </p>
+          </EmptyState>
+        )}
+      </ChatContainer>
     </AppContainer>
   );
 }
