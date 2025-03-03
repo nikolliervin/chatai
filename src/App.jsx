@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import styled from 'styled-components'
 import ChatWindow from './components/ChatWindow'
+import * as api from './services/api'
 
 // Styled components
 const AppContainer = styled.div`
@@ -89,53 +90,83 @@ const EmptyState = styled.div`
 
 function App() {
   const [chats, setChats] = useState([]);
+  const [models, setModels] = useState([]);
   const [selectedModel, setSelectedModel] = useState('gpt-3.5-turbo');
   const [currentChat, setCurrentChat] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const handleNewChat = () => {
-    const newChat = {
-      id: Date.now(),
-      title: 'New Chat',
-      messages: []
+  useEffect(() => {
+    const initializeApp = async () => {
+      try {
+        const [modelsData, chatsData] = await Promise.all([
+          api.getModels(),
+          api.getChats()
+        ]);
+        setModels(modelsData);
+        setChats(chatsData);
+      } catch (err) {
+        setError('Failed to load initial data');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
     };
-    setChats([...chats, newChat]);
-    setCurrentChat(newChat);
+
+    initializeApp();
+  }, []);
+
+  const handleNewChat = async () => {
+    try {
+      const newChat = await api.createChat(selectedModel);
+      setChats([...chats, newChat]);
+      setCurrentChat(newChat);
+    } catch (err) {
+      console.error('Failed to create new chat:', err);
+    }
   };
 
   const handleSendMessage = async (message) => {
     if (!currentChat) return;
 
-    // Add user message to chat
-    const updatedChat = {
-      ...currentChat,
-      messages: [...currentChat.messages, message]
-    };
-
-    // Update chat in state
-    setChats(chats.map(chat => 
-      chat.id === currentChat.id ? updatedChat : chat
-    ));
-    setCurrentChat(updatedChat);
-
-    // TODO: Add API call to get model response
-    // For now, we'll simulate a response
-    setTimeout(() => {
-      const assistantMessage = {
-        role: 'assistant',
-        content: `This is a simulated response to: "${message.content}"`
+    try {
+      // Add user message to chat immediately for UI responsiveness
+      const updatedChat = {
+        ...currentChat,
+        messages: [...currentChat.messages, message]
       };
+
+      // Update local state
+      setChats(chats.map(chat => 
+        chat.id === currentChat.id ? updatedChat : chat
+      ));
+      setCurrentChat(updatedChat);
+
+      // Send message to backend
+      const response = await api.sendMessage(currentChat.id, message);
       
+      // Update chat with AI response
       const chatWithResponse = {
         ...updatedChat,
-        messages: [...updatedChat.messages, assistantMessage]
+        messages: [...updatedChat.messages, response.response]
       };
 
       setChats(chats.map(chat => 
         chat.id === currentChat.id ? chatWithResponse : chat
       ));
       setCurrentChat(chatWithResponse);
-    }, 1000);
+    } catch (err) {
+      console.error('Failed to send message:', err);
+    }
   };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
 
   return (
     <AppContainer>
@@ -147,9 +178,11 @@ function App() {
           value={selectedModel}
           onChange={(e) => setSelectedModel(e.target.value)}
         >
-          <option value="gpt-3.5-turbo">GPT-3.5</option>
-          <option value="gpt-4">GPT-4</option>
-          <option value="deepseek">DeepSeek</option>
+          {models.map(model => (
+            <option key={model.id} value={model.id}>
+              {model.name}
+            </option>
+          ))}
         </ModelSelect>
         <ChatList>
           {chats.map(chat => (
