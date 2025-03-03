@@ -85,6 +85,12 @@ The frontend will be available at http://localhost:5173
 - `PUT /api/chats/{chat_id}` - Update a chat
 - `DELETE /api/chats/{chat_id}` - Delete a chat
 
+## Preview
+![chatai 2](https://github.com/user-attachments/assets/3e1349ed-7212-4709-a5ae-4fcf8aaf34bc)
+
+![chati 3](https://github.com/user-attachments/assets/03731937-c7aa-4c67-9c81-f9a63edb8deb)
+
+
 ## Contributing
 
 1. Fork the repository
