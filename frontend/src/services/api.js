@@ -67,10 +67,15 @@ export const getChats = async () => {
 
 export const createChat = async (model) => {
   try {
+    console.log('Creating chat with model:', model);
     const response = await api.post('/chats', { model });
+    console.log('Create chat response:', response.data);
     return response.data;
   } catch (error) {
     console.error('Failed to create chat:', error);
+    if (error.response) {
+      console.error('Error response:', error.response.data);
+    }
     throw error;
   }
 };

@@ -162,13 +162,16 @@ const ChatItem = styled.div`
   color: var(--text-primary);
   border: 1px solid ${props => props.selected ? 'var(--border-hover)' : 'transparent'};
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 
   &:hover {
     background-color: var(--bg-hover);
   }
 
-  &:after {
-    display: none;
+  &:hover .delete-button {
+    opacity: 1;
   }
 `;
 
@@ -187,6 +190,35 @@ const ChatTitle = styled.div`
 const ChatTimestamp = styled.div`
   font-size: 0.8rem;
   color: var(--text-tertiary);
+`;
+
+const DeleteButton = styled.button`
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 4px;
+  color: var(--text-tertiary);
+  opacity: 0;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+
+  &:hover {
+    background: rgba(255, 0, 0, 0.1);
+    color: #ff4444;
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
 `;
 
 const EmptyState = styled.div`
@@ -242,7 +274,7 @@ function formatTimestamp(timestamp) {
 function App() {
   const [chats, setChats] = useState([]);
   const [models, setModels] = useState([]);
-  const [selectedModel, setSelectedModel] = useState('gpt-3.5-turbo');
+  const [selectedModel, setSelectedModel] = useState('mistral:latest');
   const [currentChat, setCurrentChat] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -256,6 +288,9 @@ function App() {
           api.getChats()
         ]);
         setModels(modelsData);
+        if (modelsData && modelsData.length > 0) {
+          setSelectedModel(modelsData[0].id);
+        }
         // Add timestamps to existing chats if they don't have one
         const chatsWithTimestamps = chatsData.map(chat => ({
           ...chat,
@@ -275,17 +310,30 @@ function App() {
 
   const handleNewChat = async () => {
     try {
+      console.log('Creating new chat with model:', selectedModel);
       const timestamp = new Date().toISOString();
-      const newChat = await api.createChat(selectedModel);
-      const chatWithTimestamp = {
-        ...newChat,
-        timestamp,
-        title: `New Chat ${chats.length + 1}`,
+      const chatCount = chats.length + 1;
+      const newChat = {
+        id: Date.now().toString(),
+        title: `New Chat ${chatCount}`,
+        messages: [],
+        model: selectedModel,
+        timestamp
       };
-      setChats([...chats, chatWithTimestamp]);
-      setCurrentChat(chatWithTimestamp);
-    } catch (err) {
-      console.error('Failed to create new chat:', err);
+
+      const createdChat = await api.createChat(selectedModel);
+      console.log('Created chat:', createdChat);
+
+      const finalChat = {
+        ...newChat,
+        id: createdChat.id // Use the ID from the backend
+      };
+
+      setChats(prevChats => [finalChat, ...prevChats]);
+      setCurrentChat(finalChat);
+    } catch (error) {
+      console.error('Error creating new chat:', error);
+      setError('Failed to create new chat');
     }
   };
 
@@ -320,6 +368,21 @@ function App() {
       setCurrentChat(chatWithResponse);
     } catch (err) {
       console.error('Failed to send message:', err);
+      setError('Failed to send message');
+    }
+  };
+
+  const handleDeleteChat = async (chatId, event) => {
+    event.stopPropagation(); // Prevent chat selection when deleting
+    try {
+      await api.deleteChat(chatId);
+      setChats(prevChats => prevChats.filter(chat => chat.id !== chatId));
+      if (currentChat?.id === chatId) {
+        setCurrentChat(null);
+      }
+    } catch (error) {
+      console.error('Failed to delete chat:', error);
+      setError('Failed to delete chat');
     }
   };
 
@@ -362,9 +425,22 @@ function App() {
                 onClick={() => setCurrentChat(chat)}
               >
                 <ChatItemContent>
-                  <ChatTitle selected={currentChat?.id === chat.id}>{chat.title || 'New Chat'}</ChatTitle>
+                  <ChatTitle selected={currentChat?.id === chat.id}>
+                    {chat.title || 'New Chat'}
+                  </ChatTitle>
                   <ChatTimestamp>{formatTimestamp(chat.timestamp)}</ChatTimestamp>
                 </ChatItemContent>
+                <DeleteButton
+                  className="delete-button"
+                  onClick={(e) => handleDeleteChat(chat.id, e)}
+                  title="Delete chat"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 6h18"></path>
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                  </svg>
+                </DeleteButton>
               </ChatItem>
             ))}
           </ChatList>

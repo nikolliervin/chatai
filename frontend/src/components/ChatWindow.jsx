@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
+import MarkdownMessage from './MarkdownMessage';
 
 const ChatContainer = styled.div`
   display: flex;
@@ -86,6 +87,66 @@ const MessageContent = styled.div`
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+  }
+`;
+
+const TypingIndicator = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 16px;
+  background-color: var(--bg-secondary);
+  border-radius: 18px 18px 18px 0;
+  border: 2px solid var(--border-color);
+  max-width: 100px;
+  margin-bottom: 10px;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeIn 0.3s ease forwards;
+
+  span {
+    width: 8px;
+    height: 8px;
+    background-color: var(--text-secondary);
+    border-radius: 50%;
+    display: inline-block;
+    animation: bounce 1.4s infinite ease-in-out;
+
+    &:nth-child(1) { animation-delay: 0s; }
+    &:nth-child(2) { animation-delay: 0.2s; }
+    &:nth-child(3) { animation-delay: 0.4s; }
+  }
+
+  @keyframes bounce {
+    0%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-8px); }
+  }
+`;
+
+const TypewriterText = styled.div`
+  .typing {
+    opacity: 0;
+    animation: fadeIn 0.3s ease forwards;
+  }
+
+  .typed {
+    display: inline;
+    opacity: 1;
+  }
+
+  .cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    background-color: var(--text-primary);
+    margin-left: 2px;
+    animation: blink 1s infinite;
+    vertical-align: middle;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
   }
 `;
 
@@ -238,7 +299,9 @@ function ChatWindow({ currentChat, onSendMessage }) {
   const [isTyping, setIsTyping] = useState(false);
   const [editingMessage, setEditingMessage] = useState(null);
   const [editContent, setEditContent] = useState('');
+  const [typingIndex, setTypingIndex] = useState(-1);
   const messagesEndRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -246,6 +309,30 @@ function ChatWindow({ currentChat, onSendMessage }) {
 
   useEffect(() => {
     scrollToBottom();
+  }, [currentChat?.messages, isTyping]);
+
+  useEffect(() => {
+    // Start typing effect when a new assistant message is added
+    if (currentChat?.messages) {
+      const lastMessage = currentChat.messages[currentChat.messages.length - 1];
+      if (lastMessage && lastMessage.role === 'assistant') {
+        setTypingIndex(currentChat.messages.length - 1);
+        setIsTyping(true);
+        
+        // Simulate typing delay based on message length
+        const typingDuration = Math.min(lastMessage.content.length * 20, 2000);
+        typingTimeoutRef.current = setTimeout(() => {
+          setIsTyping(false);
+          setTypingIndex(-1);
+        }, typingDuration);
+      }
+    }
+
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
   }, [currentChat?.messages]);
 
   const handleSend = async () => {
@@ -256,9 +343,9 @@ function ChatWindow({ currentChat, onSendMessage }) {
       content: message.trim()
     };
     
-    onSendMessage(newMessage);
     setMessage('');
     setIsTyping(true);
+    onSendMessage(newMessage);
   };
 
   const handleCopy = (content) => {
@@ -337,7 +424,7 @@ function ChatWindow({ currentChat, onSendMessage }) {
               ) : (
                 <MessageWrapper isUser={true}>
                   <MessageContent className="message-content">
-                    {msg.content}
+                    <MarkdownMessage content={msg.content} />
                   </MessageContent>
                   <MessageActions>
                     <ActionButton onClick={() => handleCopy(msg.content)} title="Copy message">
@@ -360,7 +447,20 @@ function ChatWindow({ currentChat, onSendMessage }) {
             <AssistantMessage key={index}>
               <MessageWrapper isUser={false}>
                 <MessageContent className="message-content">
-                  {msg.content}
+                  <TypewriterText>
+                    {index === typingIndex ? (
+                      <>
+                        <span className="typing">
+                          <MarkdownMessage content={msg.content} />
+                        </span>
+                        <span className="cursor" />
+                      </>
+                    ) : (
+                      <span className="typed">
+                        <MarkdownMessage content={msg.content} />
+                      </span>
+                    )}
+                  </TypewriterText>
                 </MessageContent>
                 <MessageActions>
                   <ActionButton onClick={() => handleCopy(msg.content)} title="Copy message">
@@ -374,6 +474,17 @@ function ChatWindow({ currentChat, onSendMessage }) {
             </AssistantMessage>
           )
         ))}
+        {isTyping && !currentChat?.messages[typingIndex] && (
+          <AssistantMessage>
+            <MessageWrapper isUser={false}>
+              <TypingIndicator>
+                <span></span>
+                <span></span>
+                <span></span>
+              </TypingIndicator>
+            </MessageWrapper>
+          </AssistantMessage>
+        )}
         <div ref={messagesEndRef} />
       </MessagesContainer>
       <InputContainer>
@@ -383,12 +494,13 @@ function ChatWindow({ currentChat, onSendMessage }) {
           onKeyPress={handleKeyPress}
           placeholder="Type a message..."
           rows={1}
+          disabled={isTyping}
         />
         <SendButton
           onClick={handleSend}
           disabled={!message.trim() || isTyping}
         >
-          <span>Send</span>
+          <span>{isTyping ? 'Thinking...' : 'Send'}</span>
         </SendButton>
       </InputContainer>
     </ChatContainer>
