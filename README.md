@@ -1,37 +1,14 @@
 # Chat Application
 
-A modern chat interface built with React and FastAPI that mimics the functionalities of ChatGPT and DeepSeek.
+A modern chat interface built with React and FastAPI that seamlessly integrates with the Ollama API to provide dynamic, AI-driven conversations.
 
 ## Features
 
 - Modern, responsive chat interface
-- Multiple model support
+- Multiple Ollama model support
 - Real-time chat functionality
-- Save and manage conversations
+- Save, manage, import & export conversations
 - Clean and intuitive UI
-
-## Project Structure
-
-```
-.
-├── frontend/           # React frontend application
-│   ├── src/
-│   │   ├── components/
-│   │   │   └── ChatWindow.jsx
-│   │   ├── services/
-│   │   │   └── api.js
-│   │   ├── App.jsx
-│   │   └── main.jsx
-│   ├── index.html
-│   ├── package.json
-│   └── vite.config.js
-│
-├── backend/           # FastAPI backend application
-│   ├── main.py
-│   └── requirements.txt
-│
-└── README.md
-```
 
 ## Prerequisites
 
