@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
@@ -11,10 +11,10 @@ app = FastAPI()
 # Enable CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # React dev server
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=["*"],  # Allow all origins
+    allow_credentials=False,  # Disable credentials requirement
+    allow_methods=["*"],  # Allow all methods
+    allow_headers=["*"],  # Allow all headers
 )
 
 # Data models
@@ -28,6 +28,9 @@ class Chat(BaseModel):
     messages: List[Message]
     model: str
     created_at: str
+
+class CreateChatRequest(BaseModel):
+    model: str
 
 # In-memory storage (replace with database in production)
 chats = {}
@@ -48,13 +51,13 @@ async def get_chats():
     return {"chats": list(chats.values())}
 
 @app.post("/api/chats")
-async def create_chat(model: str):
+async def create_chat(request: CreateChatRequest):
     chat_id = str(datetime.now().timestamp())
     new_chat = Chat(
         id=chat_id,
         title="New Chat",
         messages=[],
-        model=model,
+        model=request.model,
         created_at=datetime.now().isoformat()
     )
     chats[chat_id] = new_chat
