@@ -59,10 +59,10 @@ const UserMessage = styled(Message)`
   justify-content: flex-end;
   
   .message-content {
-    background: linear-gradient(135deg, #00dc82, #36e4da);
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
     color: white;
     border-radius: 18px 18px 0 18px;
-    box-shadow: 0 4px 15px rgba(0, 220, 130, 0.2);
+    box-shadow: 0 4px 15px rgba(124, 58, 237, 0.2);
   }
 `;
 
@@ -177,8 +177,8 @@ const Input = styled.textarea`
 
   &:focus {
     outline: none;
-    border-color: #00dc82;
-    box-shadow: 0 0 0 3px rgba(0, 220, 130, 0.2);
+    border-color: #7c3aed;
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2);
   }
 
   &::placeholder {
@@ -186,13 +186,13 @@ const Input = styled.textarea`
   }
 
   &:hover {
-    border-color: #00dc82;
+    border-color: #7c3aed;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   }
 `;
 
 const SendButton = styled.button`
-  background: linear-gradient(135deg, #00dc82, #36e4da);
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
   color: white;
   border: none;
   padding: 12px 24px;
@@ -200,7 +200,7 @@ const SendButton = styled.button`
   cursor: pointer;
   font-weight: 600;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(0, 220, 130, 0.3);
+  box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
   min-width: 100px;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
   position: relative;
@@ -213,14 +213,14 @@ const SendButton = styled.button`
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, #36e4da, #00dc82);
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
     opacity: 0;
     transition: opacity 0.3s ease;
   }
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0, 220, 130, 0.4);
+    box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
   }
 
   &:hover:before {
@@ -229,7 +229,7 @@ const SendButton = styled.button`
 
   &:active {
     transform: translateY(0);
-    box-shadow: 0 2px 10px rgba(0, 220, 130, 0.3);
+    box-shadow: 0 2px 10px rgba(124, 58, 237, 0.3);
   }
 
   &:disabled {

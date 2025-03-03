@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import styled from 'styled-components'
 import ChatWindow from './components/ChatWindow'
 import * as api from './services/api'
@@ -26,6 +26,7 @@ const Sidebar = styled.div`
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
   overflow: hidden;
+  position: relative;
 
   & > * {
     opacity: ${props => props.isCollapsed ? '0' : '1'};
@@ -67,6 +68,46 @@ const TopSection = styled.div`
   margin-bottom: 32px;
   border-bottom: 1px solid var(--border-color);
   padding-bottom: 24px;
+`;
+
+const ButtonGroup = styled.div`
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+`;
+
+const ActionIconButton = styled.button`
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.9rem;
+
+  &:hover {
+    background: var(--bg-hover);
+    border-color: var(--border-hover);
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+`;
+
+const HiddenInput = styled.input`
+  display: none;
 `;
 
 const ChatContainer = styled.div`
@@ -151,6 +192,7 @@ const ChatList = styled.div`
   flex-direction: column;
   gap: 12px;
   padding-right: 8px;
+  margin-bottom: 16px;
 `;
 
 const ChatItem = styled.div`
@@ -179,12 +221,17 @@ const ChatItemContent = styled.div`
   display: flex;
   flex-direction: column;
   gap: 4px;
+  flex: 1;
+  min-width: 0;
 `;
 
 const ChatTitle = styled.div`
   font-weight: 400;
   font-size: 0.95rem;
   color: ${props => props.selected ? 'var(--text-primary)' : 'var(--text-secondary)'};
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 `;
 
 const ChatTimestamp = styled.div`
@@ -192,23 +239,33 @@ const ChatTimestamp = styled.div`
   color: var(--text-tertiary);
 `;
 
-const DeleteButton = styled.button`
+const MessageActions = styled.div`
+  display: flex;
+  opacity: 0;
+  transition: opacity 0.2s ease;
   position: absolute;
-  right: 8px;
+  right: 16px;
   top: 50%;
   transform: translateY(-50%);
+  padding: 4px;
+
+  ${ChatItem}:hover & {
+    opacity: 1;
+  }
+`;
+
+const ActionButton = styled.button`
   background: none;
   border: none;
-  padding: 4px;
+  padding: 6px;
   color: var(--text-tertiary);
-  opacity: 0;
+  border-radius: 4px;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 4px;
+  width: 28px;
+  height: 28px;
 
   &:hover {
     background: rgba(255, 0, 0, 0.1);
@@ -247,6 +304,82 @@ const EmptyState = styled.div`
   }
 `;
 
+const LoadingContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background-color: var(--bg-primary);
+`;
+
+const LoadingSpinner = styled.div`
+  width: 50px;
+  height: 50px;
+  border: 3px solid var(--bg-hover);
+  border-radius: 50%;
+  border-top-color: var(--border-hover);
+  animation: spin 1s ease-in-out infinite;
+  margin-bottom: 16px;
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+`;
+
+const LoadingText = styled.div`
+  color: var(--text-secondary);
+  font-size: 1rem;
+  animation: pulse 1.5s ease-in-out infinite;
+
+  @keyframes pulse {
+    0% {
+      opacity: 0.6;
+    }
+    50% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0.6;
+    }
+  }
+`;
+
+const LoadingOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+`;
+
+const LoadingMessage = styled.div`
+  color: white;
+  margin-top: 16px;
+  font-size: 1rem;
+  text-align: center;
+
+  p {
+    margin: 8px 0;
+    opacity: 0.8;
+  }
+`;
+
+const BottomSection = styled.div`
+  border-top: 1px solid var(--border-color);
+  padding-top: 16px;
+  margin-top: auto;
+`;
+
 function formatTimestamp(timestamp) {
   const date = new Date(timestamp);
   const now = new Date();
@@ -279,6 +412,9 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -386,8 +522,98 @@ function App() {
     }
   };
 
+  const handleExportChat = () => {
+    if (!currentChat) return;
+    
+    const chatData = {
+      ...currentChat,
+      timestamp: new Date().toISOString()
+    };
+
+    const blob = new Blob([JSON.stringify(chatData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `chat-${currentChat.title || 'export'}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImportChat = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type && !file.name.endsWith('.json')) {
+      setError('Please select a valid JSON file');
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
+
+    try {
+      setIsImporting(true);
+      const text = await file.text();
+      let importedChat;
+      
+      try {
+        importedChat = JSON.parse(text);
+      } catch (e) {
+        throw new Error('Invalid JSON file format');
+      }
+
+      if (!importedChat || !Array.isArray(importedChat.messages)) {
+        throw new Error('Invalid chat format: missing messages array');
+      }
+      
+      // Create a new chat with the imported data
+      const createdChat = await api.createChat(importedChat.model || selectedModel);
+      
+      const finalChat = {
+        ...importedChat,
+        id: createdChat.id,
+        timestamp: new Date().toISOString()
+      };
+
+      // Set total messages for progress tracking
+      setImportProgress({ current: 0, total: importedChat.messages.length });
+
+      // Send all messages in sequence
+      for (let i = 0; i < importedChat.messages.length; i++) {
+        const message = importedChat.messages[i];
+        await api.sendMessage(createdChat.id, message);
+        setImportProgress(prev => ({ ...prev, current: i + 1 }));
+      }
+
+      setChats(prevChats => [finalChat, ...prevChats]);
+      setCurrentChat(finalChat);
+      setError(null); // Clear any previous errors
+    } catch (error) {
+      console.error('Failed to import chat:', error);
+      setError(error.message || 'Failed to import chat');
+    } finally {
+      setIsImporting(false);
+      setImportProgress({ current: 0, total: 0 });
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <LoadingContainer>
+        <LoadingSpinner />
+        <LoadingText>Loading ...</LoadingText>
+      </LoadingContainer>
+    );
   }
 
   if (error) {
@@ -396,6 +622,17 @@ function App() {
 
   return (
     <AppContainer>
+      {isImporting && (
+        <LoadingOverlay>
+          <LoadingSpinner />
+          <LoadingMessage>
+            <div>Importing Chat...</div>
+            {importProgress.total > 0 && (
+              <p>Processing message {importProgress.current} of {importProgress.total}</p>
+            )}
+          </LoadingMessage>
+        </LoadingOverlay>
+      )}
       <SidebarContainer>
         <Sidebar isCollapsed={isSidebarCollapsed}>
           <TopSection>
@@ -430,20 +667,54 @@ function App() {
                   </ChatTitle>
                   <ChatTimestamp>{formatTimestamp(chat.timestamp)}</ChatTimestamp>
                 </ChatItemContent>
-                <DeleteButton
-                  className="delete-button"
-                  onClick={(e) => handleDeleteChat(chat.id, e)}
-                  title="Delete chat"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 6h18"></path>
-                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                  </svg>
-                </DeleteButton>
+                <MessageActions>
+                  <ActionButton
+                    onClick={(e) => handleDeleteChat(chat.id, e)}
+                    title="Delete chat"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M3 6h18"></path>
+                      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                    </svg>
+                  </ActionButton>
+                </MessageActions>
               </ChatItem>
             ))}
           </ChatList>
+          <BottomSection>
+            <ButtonGroup>
+              <ActionIconButton 
+                onClick={handleExportChat}
+                disabled={!currentChat}
+                title={currentChat ? "Export current chat" : "Select a chat to export"}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                Export
+              </ActionIconButton>
+              <ActionIconButton 
+                onClick={handleImportClick}
+                title="Import a chat"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                Import
+              </ActionIconButton>
+            </ButtonGroup>
+            <HiddenInput
+              ref={fileInputRef}
+              type="file"
+              accept=".json,application/json"
+              onChange={handleImportChat}
+            />
+          </BottomSection>
         </Sidebar>
         <ToggleSidebarButton
           isCollapsed={isSidebarCollapsed}
@@ -462,7 +733,7 @@ function App() {
           />
         ) : (
           <EmptyState>
-            <h2>Welcome to the Chat App</h2>
+            <h2>Welcome to Chatai</h2>
             <p>
               Start a new conversation by clicking the "New Chat" button on the left.
               You can choose different AI models from the dropdown menu.
