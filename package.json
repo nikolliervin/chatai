@@ -4,7 +4,7 @@
   "description": "A modern chat interface built with React and FastAPI",
   "scripts": {
     "frontend": "cd frontend && npm run dev",
-    "backend": "cd backend && .\\venv\\Scripts\\activate && uvicorn main:app --reload --host 0.0.0.0 --port 8000",
+    "backend": "cd backend && .\\venv\\Scripts\\activate && python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000",
     "dev": "concurrently \"npm run frontend\" \"npm run backend\"",
     "install-all": "npm install && cd frontend && npm install"
   },
