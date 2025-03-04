@@ -92,6 +92,13 @@ npm run electron:build
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
+## Preview
+
+
+![chatai 2](https://github.com/user-attachments/assets/3e1349ed-7212-4709-a5ae-4fcf8aaf34bc)
+
+![chati 3](https://github.com/user-attachments/assets/03731937-c7aa-4c67-9c81-f9a63edb8deb)
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
