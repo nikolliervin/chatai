@@ -1,6 +1,6 @@
 # ChatAI
 
-A desktop chat application built with React, Python FastAPI, and Electron, designed to interact with Ollama's local AI models.
+A web & desktop chat application built with React, Python FastAPI, and Electron, designed to interact with Ollama's local AI models.
 
 ## Features
 
