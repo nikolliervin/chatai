@@ -15,6 +15,37 @@ A modern chat interface built with React and FastAPI that seamlessly integrates 
 - Node.js (v14 or higher)
 - Python (v3.7 or higher)
 - npm or yarn
+- Ollama
+
+## Installing Ollama
+
+1. Install Ollama by following the instructions for your operating system:
+
+   **Windows**:
+   ```bash
+   winget install Ollama.Ollama
+   ```
+
+   **macOS**:
+   ```bash
+   curl -fsSL https://ollama.com/install.sh | sh
+   ```
+
+   **Linux**:
+   ```bash
+   curl -fsSL https://ollama.com/install.sh | sh
+   ```
+2. Pull and run the Mistral model:
+   ```bash
+   ollama pull mistral
+   ```
+
+You can verify the installation by running:
+```bash
+ollama list
+```
+
+This should show mistral in the list of available models.
 
 ## Setup
 
