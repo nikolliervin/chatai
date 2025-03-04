@@ -63,7 +63,7 @@ npm run electron:dev
 
 To create a standalone desktop application:
 
-1. Make sure you're in the frontend directory:
+1. After checking out feature/electron-app, make sure you're in the frontend directory:
 ```bash
 cd frontend
 ```
